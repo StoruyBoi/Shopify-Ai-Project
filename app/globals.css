@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* Enable dark mode using the .dark class on html (Tailwind v4 style) */
+@variant dark (&:where(.dark, .dark *));
+
+/* Optional: global transition for smoother theme switch */
+html, body {
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Optional: custom scrollbars for both themes */
+body {
+  scrollbar-color: #cbd5e1 #f1f5f9; /* light */
+}
+html.dark body {
+  scrollbar-color: #334155 #0f172a; /* dark */
+}
+
+/* You can keep your keyframes and animation classes as before */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes spin-reverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit-distance, 60px)) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(var(--orbit-distance, 60px)) rotate(-360deg); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+.animate-spin-reverse {
+  animation: spin-reverse 2s linear infinite;
+}
+@keyframes fadeTheme {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+  .animate-fadeTheme {
+    animation: fadeTheme 0.35s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  /* Add to globals.css or create a new CSS module */
+.fallback-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb; /* gray-200 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dark .fallback-icon::before {
+  background-color: #374151; /* gray-700 */
+}
+
+.fallback-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Fix for Google profile images */
+.user-profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Ensure the image container has correct dimensions */
+.profile-image-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background-color: #e5e7eb; /* gray-200 */
+}
+
+.dark .profile-image-container {
+  background-color: #374151; /* gray-700 */
+}
+
+/* Improved fallback icon styles */
+.fallback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #6b7280; /* gray-500 */
+}
+
+.dark .fallback-icon {
+  color: #9ca3af; /* gray-400 */
+}
