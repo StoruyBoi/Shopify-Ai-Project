@@ -70,17 +70,42 @@ declare module "next-auth/jwt" {
   }
 }
 
-// IMPORTANT: This function now directly interacts with the database instead of making HTTP requests
+// IMPORTANT: This function directly interacts with the database - enhanced with better error handling
 async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse | null> {
   try {
-    console.log('Syncing user data directly with database:', userData);
+    console.log('🔄 Syncing user data with database:', userData.email);
     
     if (!userData.google_id) {
-      console.error('No google_id provided');
+      console.error('❌ No google_id provided for user sync');
       return null;
     }
     
+    // Create table if it doesn't exist
+    try {
+      await executeQuery({
+        query: `
+          CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            google_id VARCHAR(255) UNIQUE,
+            name VARCHAR(255),
+            email VARCHAR(255),
+            image VARCHAR(255),
+            credits_remaining INT DEFAULT 5,
+            max_credits INT DEFAULT 5,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          )
+        `,
+        values: []
+      });
+      console.log('✅ Users table created or already exists');
+    } catch (tableError) {
+      console.error('❌ Error ensuring users table exists:', tableError);
+      // Continue execution - table might already exist
+    }
+    
     // Check if user exists in database
+    console.log('🔍 Checking if user exists with google_id:', userData.google_id);
     const existingUsers = await executeQuery<DbUser[]>({
       query: 'SELECT * FROM users WHERE google_id = ?',
       values: [userData.google_id]
@@ -90,44 +115,66 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
     let userCredits = 5; // Default credits for new users
     let maxCredits = 5;  // Default max credits
     
-    if (existingUsers.length > 0) {
+    if (existingUsers && existingUsers.length > 0) {
       // User exists, update their data
       const user = existingUsers[0];
       userId = user.id;
       userCredits = user.credits_remaining;
       maxCredits = user.max_credits;
       
-      console.log('Existing user found, updating:', userId);
+      console.log('👤 Existing user found, updating:', userId);
       
-      await executeQuery({
-        query: 'UPDATE users SET name = ?, email = ?, image = ? WHERE id = ?',
-        values: [userData.name || null, userData.email || null, userData.image || null, userId]
-      });
+      try {
+        await executeQuery({
+          query: 'UPDATE users SET name = ?, email = ?, image = ? WHERE id = ?',
+          values: [userData.name || null, userData.email || null, userData.image || null, userId]
+        });
+        console.log('✅ User data updated successfully');
+      } catch (updateError) {
+        console.error('❌ Error updating user data:', updateError);
+        // Still return user data even if update fails
+      }
     } else {
       // Create new user
-      console.log('Creating new user with google_id:', userData.google_id);
+      console.log('➕ Creating new user with google_id:', userData.google_id);
       
-      const result = await executeQuery<QueryResult>({
-        query: 'INSERT INTO users (google_id, name, email, image, credits_remaining, max_credits) VALUES (?, ?, ?, ?, 5, 5)',
-        values: [userData.google_id, userData.name || null, userData.email || null, userData.image || null]
-      });
-      
-      userId = result.insertId;
-      console.log('New user created with ID:', userId);
+      try {
+        const result = await executeQuery<QueryResult>({
+          query: 'INSERT INTO users (google_id, name, email, image, credits_remaining, max_credits) VALUES (?, ?, ?, ?, 5, 5)',
+          values: [userData.google_id, userData.name || null, userData.email || null, userData.image || null]
+        });
+        
+        if (result && 'insertId' in result) {
+          userId = result.insertId;
+          console.log('✅ New user created with ID:', userId);
+        } else {
+          console.error('❌ Insert succeeded but no insertId was returned:', result);
+          return null;
+        }
+      } catch (insertError) {
+        console.error('❌ Error creating new user:', insertError);
+        return null;
+      }
     }
     
-    console.log('Sync successful, returning user data');
+    // Prepare response
+    console.log('🔄 Sync successful, returning user data with ID:', userId);
     return {
       status: 'success',
       user: {
         id: String(userId),
-        image: userData.image // Fixed line: no need for || null since interface now accepts null
+        image: userData.image
       },
       credits_remaining: userCredits,
       max_credits: maxCredits
     };
   } catch (error) {
-    console.error('Database sync error:', error);
+    console.error('❌ Fatal database sync error:', error);
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return null;
   }
 }
@@ -149,83 +196,107 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // If this is a sign-in with new user data
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.picture = user.image;
-      }
-      
-      // If this is a sign-in with Google
-      if (account && account.provider === 'google') {
-        // Prepare user data for backend
-        const userData: UserSyncData = {
-          email: token.email,
-          name: token.name,
-          google_id: token.sub || "",
-          image: token.picture
-        };
+      try {
+        // If this is a sign-in with new user data
+        if (user) {
+          console.log('👤 Setting user data in token');
+          token.id = user.id;
+          token.name = user.name;
+          token.email = user.email;
+          token.picture = user.image;
+        }
         
-        // Sync with backend
-        const backendData = await syncWithBackend(userData);
-        
-        if (backendData && backendData.status === 'success') {
-          // Store backend user ID and credits in token
-          console.log('Saving backendId to token:', backendData.user.id);
-          token.backendId = backendData.user.id;
-          token.credits = {
-            current: backendData.credits_remaining,
-            max: backendData.max_credits
+        // If this is a sign-in with Google
+        if (account && account.provider === 'google') {
+          console.log('🔐 Google sign-in detected, syncing with database');
+          // Prepare user data for backend
+          const userData: UserSyncData = {
+            email: token.email,
+            name: token.name,
+            google_id: token.sub || "",
+            image: token.picture
           };
           
-          // Update image from backend if available
-          if (backendData.user.image) {
-            token.picture = backendData.user.image;
+          // Sync with backend
+          const backendData = await syncWithBackend(userData);
+          
+          if (backendData && backendData.status === 'success') {
+            // Store backend user ID and credits in token
+            console.log('💾 Saving backendId to token:', backendData.user.id);
+            token.backendId = backendData.user.id;
+            token.credits = {
+              current: backendData.credits_remaining,
+              max: backendData.max_credits
+            };
+            
+            // Update image from backend if available
+            if (backendData.user.image) {
+              token.picture = backendData.user.image;
+            }
+          } else {
+            console.error('❌ Failed to sync with database');
           }
-        } else {
-          console.error('Failed to sync with database');
         }
+        
+        // Log the token for debugging
+        console.log('🔑 JWT callback - token values:', {
+          id: token.id,
+          sub: token.sub,
+          backendId: token.backendId,
+          credits: token.credits
+        });
+      } catch (error) {
+        console.error('❌ Error in JWT callback:', error);
+        // Don't rethrow - allow auth to continue even if there's an error
       }
-      
-      // Log the token for debugging
-      console.log('JWT callback - token values:', {
-        id: token.id,
-        sub: token.sub,
-        backendId: token.backendId,
-        credits: token.credits
-      });
       
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        // Add user ID to the session - ensuring string type
-        session.user.id = String(token.sub || token.id || "");
-        
-        // Fix for the backendId type compatibility
-        console.log('Setting session.user.backendId from token:', token.backendId);
-        session.user.backendId = String(token.backendId || "");
-        
-        // Ensure image is set and handle potential null/undefined
-        session.user.image = String(token.picture || "");
-        
-        // Add credits info to the session
-        if (token.credits) {
-          session.user.credits = token.credits;
+      try {
+        if (token && session.user) {
+          // Add user ID to the session - ensuring string type
+          session.user.id = String(token.sub || token.id || "");
+          
+          // Fix for the backendId type compatibility
+          console.log('💾 Setting session.user.backendId from token:', token.backendId);
+          session.user.backendId = String(token.backendId || "");
+          
+          // Ensure image is set and handle potential null/undefined
+          session.user.image = String(token.picture || "");
+          
+          // Add credits info to the session
+          if (token.credits) {
+            session.user.credits = token.credits;
+          }
+          
+          // Log session for debugging
+          console.log('🔐 Session callback - session.user values:', {
+            id: session.user.id,
+            backendId: session.user.backendId,
+            credits: session.user.credits
+          });
         }
-        
-        // Log session for debugging
-        console.log('Session callback - session.user values:', {
-          id: session.user.id,
-          backendId: session.user.backendId,
-          credits: session.user.credits
-        });
+      } catch (error) {
+        console.error('❌ Error in session callback:', error);
+        // Don't rethrow - allow auth to continue even if there's an error
       }
+      
       return session;
     },
   },
-  debug: true, // Enable debug mode
+  debug: true, // Enable debug mode for detailed NextAuth logs
+  logger: {
+    error(code, metadata) {
+      console.error('NextAuth error:', code, metadata);
+    },
+    warn(code) {
+      console.warn('NextAuth warning:', code);
+    },
+    debug(code, metadata) {
+      console.log('NextAuth debug:', code, metadata);
+    }
+  },
   pages: {
     signIn: '/',
   },
