@@ -55,7 +55,7 @@ declare module "next-auth/jwt" {
 
 async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse | null> {
   try {
-    const response = await fetch('http://localhost/Backend/google-auth-sync.php', {
+    const response = await fetch('https://prebuilttemplates.com/Backend/google-auth-sync.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)

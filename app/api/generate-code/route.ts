@@ -12,7 +12,7 @@ interface CreditResponse {
 
 // Renamed from useCredit to deductCredit to avoid React Hook naming convention
 async function deductCredit(userId: string): Promise<CreditResponse> {
-  const response = await fetch('http://localhost/Backend/use-credit.php', {
+  const response = await fetch('https://prebuilttemplates.com/Backend/use-credit.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId })
@@ -27,7 +27,7 @@ async function deductCredit(userId: string): Promise<CreditResponse> {
 
 // Helper function to fetch credits with proper return type
 async function fetchCredits(userId: string): Promise<CreditResponse> {
-  const response = await fetch('http://localhost/Backend/get-credits.php', {
+  const response = await fetch('https://prebuilttemplates.com/Backend/get-credits.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId })

@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     // Fetch credits from PHP backend
-    const response = await fetch('http://localhost/Backend/get-credits.php', {
+    const response = await fetch('https://prebuilttemplates.com/Backend/get-credits.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId })
