@@ -122,7 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Create a new request and store it
     pendingRequestRef.current = (async () => {
       try {
-        const response = await fetch('/api/get-credits', {
+        // Updated to use the new API endpoint
+        const response = await fetch('https://www.codehallow.com/api/credits', {
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache',

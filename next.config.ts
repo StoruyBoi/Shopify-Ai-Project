@@ -4,6 +4,9 @@ const nextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com'],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['mysql2'],
+  },
 };
 
 module.exports = nextConfig;

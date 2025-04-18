@@ -10,12 +10,13 @@ interface CreditResponse {
   max_credits: number;
 }
 
-// Renamed from useCredit to deductCredit to avoid React Hook naming convention
-async function deductCredit(userId: string): Promise<CreditResponse> {
-  const response = await fetch('https://prebuilttemplates.com/Backend/use-credit.php', {
+// Renamed from useCredit to deductCredit and removed unused userId parameter
+async function deductCredit(): Promise<CreditResponse> {
+  // Updated to use the new API endpoint
+  const response = await fetch('https://www.codehallow.com/api/credits/use', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id: userId })
+    headers: { 'Content-Type': 'application/json' }
+    // Removed user_id from body as it's retrieved from session in the API
   });
   
   if (!response.ok) {
@@ -26,11 +27,13 @@ async function deductCredit(userId: string): Promise<CreditResponse> {
 }
 
 // Helper function to fetch credits with proper return type
-async function fetchCredits(userId: string): Promise<CreditResponse> {
-  const response = await fetch('https://prebuilttemplates.com/Backend/get-credits.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id: userId })
+// Removed unused userId parameter
+async function fetchCredits(): Promise<CreditResponse> {
+  // Updated to use the new API endpoint
+  const response = await fetch('https://www.codehallow.com/api/credits', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+    // Removed user_id from body as it's retrieved from session in the API
   });
   
   if (!response.ok) {
@@ -69,8 +72,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Check user credits
-    const creditsData = await fetchCredits(userId);
+    // Check user credits - removed userId argument
+    const creditsData = await fetchCredits();
     
     if (creditsData.credits_remaining <= 0) {
       return NextResponse.json(
@@ -86,8 +89,8 @@ export async function POST(req: NextRequest) {
       imageDescriptions || 'No reference images provided.'
     );
     
-    // Deduct credit (renamed function call)
-    const creditData = await deductCredit(userId);
+    // Deduct credit (renamed function call) - removed userId argument
+    const creditData = await deductCredit();
     
     // Return the generated code and updated credit info
     return NextResponse.json({ 

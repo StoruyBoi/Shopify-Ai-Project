@@ -55,20 +55,29 @@ declare module "next-auth/jwt" {
 
 async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse | null> {
   try {
-    const response = await fetch('https://prebuilttemplates.com/Backend/google-auth-sync.php', {
+    // Use the new API endpoint instead of PHP
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.codehallow.com';
+    
+    // Log what we're trying to do
+    console.log(`Syncing user data with backend at ${baseUrl}/api/auth/sync`);
+    
+    const response = await fetch(`${baseUrl}/api/auth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
     });
     
     if (!response.ok) {
+      console.error(`Backend sync failed with status: ${response.status}`);
       throw new Error(`Backend sync failed: ${response.status}`);
     }
     
-    return await response.json();
-  } catch {
-    // Removed unused error parameter
-    console.error('Backend sync error occurred');
+    const data = await response.json();
+    console.log('Backend sync succeeded:', data);
+    return data;
+  } catch (error) {
+    // Add error parameter to log more details
+    console.error('Backend sync error occurred:', error);
     return null;
   }
 }
@@ -123,8 +132,19 @@ export const authOptions: NextAuthOptions = {
           if (backendData.user.image) {
             token.picture = backendData.user.image;
           }
+        } else {
+          console.error('Failed to sync with backend or invalid response');
         }
       }
+      
+      // Add debugging
+      console.log('JWT callback - token:', {
+        id: token.id,
+        sub: token.sub,
+        backendId: token.backendId,
+        name: token.name,
+        credits: token.credits
+      });
       
       return token;
     },
@@ -143,10 +163,18 @@ export const authOptions: NextAuthOptions = {
         if (token.credits) {
           session.user.credits = token.credits;
         }
+        
+        // Add debugging
+        console.log('Session callback - session.user:', {
+          id: session.user.id,
+          backendId: session.user.backendId,
+          credits: session.user.credits
+        });
       }
       return session;
     },
   },
+  debug: process.env.NODE_ENV === 'development',
   pages: {
     signIn: '/',
   },
