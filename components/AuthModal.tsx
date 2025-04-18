@@ -13,7 +13,8 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const { login } = useAuth();
+  // Remove the unused 'login' variable
+  const {} = useAuth();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,9 +40,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         onSuccess();
         onClose();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Google authentication error:', err);
-      setError(err.message || 'Google authentication failed');
+      // Handle the error with proper type checking
+      if (err instanceof Error) {
+        setError(err.message || 'Google authentication failed');
+      } else {
+        setError('Google authentication failed');
+      }
     } finally {
       setIsLoading(false);
     }

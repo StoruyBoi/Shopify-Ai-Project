@@ -15,7 +15,6 @@ export default function Home() {
   const [sectionType, setSectionType] = useState<string>('Hero');
   const [requirements, setRequirements] = useState<string>('');
   const [imageDescription, setImageDescription] = useState<string>('');
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -61,11 +60,9 @@ export default function Home() {
   // Handle image upload
   const handleImageUpload = (desc: string, file?: File, preview?: string) => {
     setImageDescription(desc);
-    if (file) setUploadedImage(file);
     if (preview) setPreviewUrl(preview);
     else {
       setPreviewUrl(null);
-      setUploadedImage(null);
     }
   };
 
@@ -202,7 +199,7 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
+  
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
     // Refresh credits after successful login

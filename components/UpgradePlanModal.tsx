@@ -61,7 +61,8 @@ export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalPr
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
-  const { user } = useAuth();
+  // Removed the unused 'user' variable from useAuth()
+  const { } = useAuth();
 
   if (!isOpen) return null;
 
@@ -101,8 +102,9 @@ export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalPr
         alert(`Successfully upgraded to ${plans.find(p => p.id === selectedPlan)?.name} plan!`);
       }, 2000);
       
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      // Changed 'any' to 'unknown' for better type safety
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setIsProcessing(false);
     }
   };
@@ -222,5 +224,5 @@ export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalPr
         </div>
       </div>
     </div>
-  );
+  ); 
 }

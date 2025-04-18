@@ -1,7 +1,7 @@
 // components/CreditsDisplay.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,27 +9,41 @@ const CreditsDisplay: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const { credits, refreshCredits, isRefreshingCredits } = useAuth();
   const progress = credits.max > 0 ? Math.max(0, Math.min(100, (credits.current / credits.max) * 100)) : 0;
+  const lastRefreshTime = useRef<number>(0);
+  const REFRESH_INTERVAL = 60000; // Only refresh once per minute
 
-  // Refresh credits when component mounts
-  useEffect(() => {
-    if (!isRefreshingCredits) {
+  // Throttled refresh function
+  const throttledRefresh = () => {
+    const now = Date.now();
+    if (now - lastRefreshTime.current > REFRESH_INTERVAL && !isRefreshingCredits) {
+      lastRefreshTime.current = now;
       refreshCredits();
     }
-  }, []);
+  };
 
-  // Listen for credit update events
+  // Refresh credits when component mounts, but with throttling
+  useEffect(() => {
+    throttledRefresh();
+    
+    // Set up a simple interval to check credits periodically (not too frequently)
+    const intervalId = setInterval(throttledRefresh, REFRESH_INTERVAL);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isRefreshingCredits, refreshCredits]);
+
+  // Listen for credit update events with debouncing
   useEffect(() => {
     const handleCreditsUpdated = () => {
-      if (!isRefreshingCredits) {
-        refreshCredits();
-      }
+      throttledRefresh();
     };
 
     window.addEventListener('credits-updated', handleCreditsUpdated);
     return () => {
       window.removeEventListener('credits-updated', handleCreditsUpdated);
     };
-  }, [refreshCredits, isRefreshingCredits]);
+  }, []);
 
   return (
     <div className="relative">

@@ -67,8 +67,8 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
     }
     
     return await response.json();
-  } catch (_) {
-    // Using underscore to indicate unused parameter
+  } catch {
+    // Removed unused underscore parameter
     console.error('Backend sync error occurred');
     return null;
   }

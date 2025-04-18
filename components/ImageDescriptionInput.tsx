@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 import { Upload } from 'lucide-react';
@@ -10,7 +10,6 @@ interface ImageDescriptionInputProps {
 }
 
 export default function ImageDescriptionInput({ onChange }: ImageDescriptionInputProps) {
-  const [imageDescription, setImageDescription] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -41,7 +40,6 @@ export default function ImageDescriptionInput({ onChange }: ImageDescriptionInpu
       
       // Create a description with just the file name for the API
       const newDescription = `Reference image: ${file.name}`;
-      setImageDescription(newDescription);
       
       // Notify parent component with all three values
       if (onChange) onChange(newDescription, file, newPreviewUrl);
@@ -57,7 +55,6 @@ export default function ImageDescriptionInput({ onChange }: ImageDescriptionInpu
     // Reset all state
     setUploadedImage(null);
     setPreviewUrl(null);
-    setImageDescription('');
     
     // Notify parent component
     if (onChange) onChange('');

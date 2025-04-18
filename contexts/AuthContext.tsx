@@ -1,64 +1,64 @@
 // contexts/AuthContext.tsx
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 
-type User = {
+// Define types
+interface User {
   id: string;
-  name: string;
-  email: string;
-  image?: string;
-  backendId?: string;
-};
+  backendId: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+}
 
-type Credits = {
+interface Credits {
   current: number;
   max: number;
-};
+}
 
-type AuthContextType = {
+interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   credits: Credits;
-  login: (provider: string) => Promise<void>;
-  logout: () => Promise<void>;
+  login: (token: string) => void;
+  logout: () => void;
   refreshCredits: () => Promise<void>;
-  updateCredits: (current: number, max: number) => void;
   isRefreshingCredits: boolean;
-};
+  // Added the missing updateCredits function to the interface
+  updateCredits: (current: number, max: number) => void;
+}
 
+// Default credits
 const defaultCredits: Credits = { current: 0, max: 0 };
 
-const AuthContext = createContext<AuthContextType>({
-  isLoggedIn: false,
-  user: null,
-  credits: defaultCredits,
-  login: async () => {},
-  logout: async () => {},
-  refreshCredits: async () => {},
-  updateCredits: () => {},
-  isRefreshingCredits: false,
-});
+// Create context
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
+// Provider component
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { data: session } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [credits, setCredits] = useState<Credits>(defaultCredits);
   const [isRefreshingCredits, setIsRefreshingCredits] = useState(false);
+  
+  // Cache request tracking
+  const lastCreditsFetchTime = useRef<number>(0);
+  const CACHE_DURATION = 30000; // 30 seconds cache
+  const pendingRequestRef = useRef<Promise<void> | null>(null);
 
-  // Update user when session changes
+  // Update user from session
   useEffect(() => {
     if (session?.user) {
       setUser({
         id: session.user.id || '',
-        name: session.user.name || '',
-        email: session.user.email || '',
-        image: session.user.image,
-        backendId: session.user.backendId,
+        backendId: session.user.backendId || '',
+        name: session.user.name || null,
+        email: session.user.email || null,
+        image: session.user.image || null,
       });
       
-      // If session has credits info, update credits
       if (session.user.credits) {
         setCredits({
           current: session.user.credits.current,
@@ -67,48 +67,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } else {
       setUser(null);
-      setCredits(defaultCredits);
     }
   }, [session]);
 
-  const login = async (provider: string) => {
-    await signIn(provider, { callbackUrl: '/' });
-  };
+  // Login function
+  const login = useCallback((token: string) => {
+    localStorage.setItem('token', token);
+  }, []);
 
-  const logout = async () => {
-    await signOut({ callbackUrl: '/' });
-    setUser(null);
-    setCredits(defaultCredits);
-  };
+  // Logout function
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    signOut({ callbackUrl: '/' });
+  }, []);
 
-  const refreshCredits = async () => {
+  // Add the missing updateCredits function
+  const updateCredits = useCallback((current: number, max: number) => {
+    setCredits({ current, max });
+    // Dispatch a custom event to notify other components about credits update
+    window.dispatchEvent(new CustomEvent('credits-updated'));
+  }, []);
+
+  // Refresh credits with caching and request deduplication
+  const refreshCredits = useCallback(async () => {
+    // Don't fetch if not logged in
     if (!user?.backendId) return;
     
+    // Return cached data if it's recent enough
+    const now = Date.now();
+    if (now - lastCreditsFetchTime.current < CACHE_DURATION) {
+      return;
+    }
+    
+    // If there's already a pending request, return that instead of making a new one
+    if (pendingRequestRef.current) {
+      return pendingRequestRef.current;
+    }
+    
+    // Start refreshing
     setIsRefreshingCredits(true);
     
-    try {
-      const response = await fetch('/api/get-credits', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCredits({
-          current: data.credits_remaining,
-          max: data.max_credits,
+    // Create a new request and store it
+    pendingRequestRef.current = (async () => {
+      try {
+        const response = await fetch('/api/get-credits', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
         });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch credits');
+        }
+        
+        const data = await response.json();
+        
+        // Use the updateCredits function to set credits
+        updateCredits(data.credits_remaining, data.max_credits);
+        
+        // Update cache timestamp
+        lastCreditsFetchTime.current = Date.now();
+      } catch (error) {
+        console.error('Error refreshing credits:', error);
+      } finally {
+        setIsRefreshingCredits(false);
+        pendingRequestRef.current = null;
       }
-    } catch (error) {
-      // Silently handle error
-    } finally {
-      setIsRefreshingCredits(false);
-    }
-  };
-
-  const updateCredits = (current: number, max: number) => {
-    setCredits({ current, max });
-  };
+    })();
+    
+    return pendingRequestRef.current;
+  }, [user?.backendId, updateCredits]);
 
   return (
     <AuthContext.Provider
@@ -119,13 +148,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         refreshCredits,
-        updateCredits,
         isRefreshingCredits,
+        // Include the updateCredits function in the provider value
+        updateCredits,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export const useAuth = () => useContext(AuthContext);
+// Hook for using the auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

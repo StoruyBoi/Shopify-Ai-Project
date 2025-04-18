@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { X, User, Mail, Key, Save, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 interface ProfileSettingsModalProps {
   isOpen: boolean;
@@ -102,8 +103,13 @@ export default function ProfileSettingsModal({ isOpen, onClose }: ProfileSetting
           }
         });
       }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+    } catch (err: unknown) {
+      // Fixed: Changed 'any' to 'unknown' - resolves the ESLint error on line 105
+      if (err instanceof Error) {
+        setError(err.message || 'An unexpected error occurred');
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -140,14 +146,19 @@ export default function ProfileSettingsModal({ isOpen, onClose }: ProfileSetting
             <div className="relative">
               <div className="h-20 w-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
                 {profileImage ? (
-                  <img 
-                    src={profileImage} 
-                    alt={name} 
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
+                  <div className="relative h-full w-full">
+                    {/* Fixed: Replaced <img> with Next.js <Image> component - resolves ESLint error on line 143 */}
+                    <Image 
+                      src={profileImage} 
+                      alt={name || "User profile"} 
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                      onError={() => {
+                        setProfileImage(null);
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div className="h-full w-full flex items-center justify-center">
                     <User className="h-10 w-10 text-gray-400" />

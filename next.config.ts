@@ -1,8 +1,8 @@
 // next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-   
+  images: {
+    domains: ['lh3.googleusercontent.com'],
   },
 };
 

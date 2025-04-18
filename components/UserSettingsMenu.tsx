@@ -4,11 +4,13 @@
 import React, { useState } from 'react';
 import { User, Crown, LogOut, Sun, Moon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
-import { signOut, useSession } from 'next-auth/react';
+// Removed unused signOut import
+import { useSession } from 'next-auth/react';
 import AuthModal from './AuthModal';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import UpgradePlanModal from './UpgradePlanModal';
 import { useAuth } from '@/contexts/AuthContext';
+// Using Image component from next/image (will be used below)
 import Image from 'next/image';
 
 const UserSettingsMenu: React.FC = () => {
@@ -39,11 +41,14 @@ const UserSettingsMenu: React.FC = () => {
   const userName = session?.user?.name || user?.name || 'User';
   const userEmail = session?.user?.email || user?.email;
   
-  // Handle image error
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.display = 'none';
-    e.currentTarget.parentElement?.classList.add('fallback-icon');
+  // Handle image error - modified for Next.js Image component
+  const handleImageError = () => {
+    // Using a different approach since we're switching to Next.js Image
+    setProfileImageError(true);
   };
+  
+  // Add state to track image loading errors
+  const [profileImageError, setProfileImageError] = useState(false);
   
   return (
     <div className="relative">
@@ -52,12 +57,15 @@ const UserSettingsMenu: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-label="User menu"
       >
-        {profileImage ? (
+        {profileImage && !profileImageError ? (
           <div className="h-8 w-8 relative">
-            <img 
+            {/* Replaced img with Next.js Image component */}
+            <Image 
               src={profileImage} 
               alt={userName}
-              className="h-full w-full object-cover"
+              fill
+              sizes="32px"
+              className="object-cover"
               onError={handleImageError}
             />
           </div>
@@ -72,8 +80,8 @@ const UserSettingsMenu: React.FC = () => {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {isLoggedIn ? "User Account" : "Not logged in"}
             </p>
-            {isLoggedIn && userEmail && (
-              <p className="text-sm font-medium truncate text-gray-800 dark:text-gray-200">
+            {userEmail && (
+              <p className="text-sm truncate text-gray-800 dark:text-gray-200">
                 {userEmail}
               </p>
             )}
