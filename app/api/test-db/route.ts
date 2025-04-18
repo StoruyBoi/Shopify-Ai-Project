@@ -5,13 +5,22 @@ import { executeQuery } from '@/lib/db';
 export async function GET() {
   try {
     // Simple query to test connection
-    const result = await executeQuery({ query: 'SELECT 1 as test' });
-    console.log('Database connection test result:', result);
+    await executeQuery({ 
+      query: 'SELECT 1 as test' 
+    });
+    
+    // Also test table structure
+    const tableInfo = await executeQuery({
+      query: 'SHOW COLUMNS FROM users'
+    });
+    
+    console.log('Database connection test successful');
+    console.log('Table structure:', tableInfo);
     
     return NextResponse.json({ 
       success: true, 
       message: 'Database connection successful',
-      result 
+      tableInfo
     });
   } catch (error) {
     console.error('Database connection test failed:', error);

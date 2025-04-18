@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options';
 import { executeQuery } from '@/lib/db';
 
-// Define proper types
+// Define types
 interface CreditResponse {
   credits_remaining: number;
   max_credits: number;
@@ -18,7 +18,7 @@ interface UserCredits {
 
 // Function to fetch credits directly from database
 async function fetchCredits(userId: string): Promise<CreditResponse> {
-  console.log('Fetching credits for user:', userId);
+  console.log('Fetching credits for user ID:', userId);
   
   try {
     const results = await executeQuery<UserCredits[]>({
@@ -43,7 +43,7 @@ async function fetchCredits(userId: string): Promise<CreditResponse> {
 
 // Function to deduct credit directly in database
 async function deductCredit(userId: string): Promise<CreditResponse> {
-  console.log('Deducting credit for user:', userId);
+  console.log('Deducting credit for user ID:', userId);
   
   try {
     // Update user credits (decrement by 1, but not below 0)
@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    console.log('Starting code generation for user:', userId);
+    console.log('Starting code generation for user ID:', userId);
     
-    // Check user credits - access database directly
+    // Check user credits directly from database
     const creditsData = await fetchCredits(userId);
     
     if (creditsData.credits_remaining <= 0) {

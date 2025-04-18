@@ -1,6 +1,7 @@
 // lib/auth-options.ts
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { executeQuery } from '@/lib/db';
 
 // Create proper interface instead of using 'any'
 interface UserSyncData {
@@ -15,10 +16,26 @@ interface BackendResponse {
   status: string;
   user: {
     id: string;
-    image?: string;
+    image?: string | null; // Updated to accept null values
   };
   credits_remaining: number;
   max_credits: number;
+}
+
+// Database interfaces
+interface DbUser {
+  id: number;
+  google_id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  credits_remaining: number;
+  max_credits: number;
+}
+
+interface QueryResult {
+  insertId: number;
+  affectedRows: number;
 }
 
 // Define session and token types to extend NextAuth types
@@ -53,27 +70,64 @@ declare module "next-auth/jwt" {
   }
 }
 
+// IMPORTANT: This function now directly interacts with the database instead of making HTTP requests
 async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse | null> {
   try {
-    console.log('Syncing user with database:', userData.email);
+    console.log('Syncing user data directly with database:', userData);
     
-    // Use the NEW serverless API route instead of PHP endpoint
-    const response = await fetch('/api/auth/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    
-    if (!response.ok) {
-      console.error(`Backend sync failed with status: ${response.status}`);
-      throw new Error(`Backend sync failed: ${response.status}`);
+    if (!userData.google_id) {
+      console.error('No google_id provided');
+      return null;
     }
     
-    const data = await response.json();
-    console.log('Sync successful, received data:', data);
-    return data;
+    // Check if user exists in database
+    const existingUsers = await executeQuery<DbUser[]>({
+      query: 'SELECT * FROM users WHERE google_id = ?',
+      values: [userData.google_id]
+    });
+    
+    let userId;
+    let userCredits = 5; // Default credits for new users
+    let maxCredits = 5;  // Default max credits
+    
+    if (existingUsers.length > 0) {
+      // User exists, update their data
+      const user = existingUsers[0];
+      userId = user.id;
+      userCredits = user.credits_remaining;
+      maxCredits = user.max_credits;
+      
+      console.log('Existing user found, updating:', userId);
+      
+      await executeQuery({
+        query: 'UPDATE users SET name = ?, email = ?, image = ? WHERE id = ?',
+        values: [userData.name || null, userData.email || null, userData.image || null, userId]
+      });
+    } else {
+      // Create new user
+      console.log('Creating new user with google_id:', userData.google_id);
+      
+      const result = await executeQuery<QueryResult>({
+        query: 'INSERT INTO users (google_id, name, email, image, credits_remaining, max_credits) VALUES (?, ?, ?, ?, 5, 5)',
+        values: [userData.google_id, userData.name || null, userData.email || null, userData.image || null]
+      });
+      
+      userId = result.insertId;
+      console.log('New user created with ID:', userId);
+    }
+    
+    console.log('Sync successful, returning user data');
+    return {
+      status: 'success',
+      user: {
+        id: String(userId),
+        image: userData.image // Fixed line: no need for || null since interface now accepts null
+      },
+      credits_remaining: userCredits,
+      max_credits: maxCredits
+    };
   } catch (error) {
-    console.error('Backend sync error occurred:', error);
+    console.error('Database sync error:', error);
     return null;
   }
 }
@@ -130,7 +184,7 @@ export const authOptions: NextAuthOptions = {
             token.picture = backendData.user.image;
           }
         } else {
-          console.error('Failed to sync with backend or invalid response');
+          console.error('Failed to sync with database');
         }
       }
       
@@ -171,7 +225,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  debug: true, // Enable debug mode to see NextAuth logs
+  debug: true, // Enable debug mode
   pages: {
     signIn: '/',
   },
