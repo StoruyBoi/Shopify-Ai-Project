@@ -55,13 +55,10 @@ declare module "next-auth/jwt" {
 
 async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse | null> {
   try {
-    // Use the new API endpoint instead of PHP
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.codehallow.com';
+    console.log('Syncing user with database:', userData.email);
     
-    // Log what we're trying to do
-    console.log(`Syncing user data with backend at ${baseUrl}/api/auth/sync`);
-    
-    const response = await fetch(`${baseUrl}/api/auth/sync`, {
+    // Use the NEW serverless API route instead of PHP endpoint
+    const response = await fetch('/api/auth/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
@@ -73,10 +70,9 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
     }
     
     const data = await response.json();
-    console.log('Backend sync succeeded:', data);
+    console.log('Sync successful, received data:', data);
     return data;
   } catch (error) {
-    // Add error parameter to log more details
     console.error('Backend sync error occurred:', error);
     return null;
   }
@@ -122,6 +118,7 @@ export const authOptions: NextAuthOptions = {
         
         if (backendData && backendData.status === 'success') {
           // Store backend user ID and credits in token
+          console.log('Saving backendId to token:', backendData.user.id);
           token.backendId = backendData.user.id;
           token.credits = {
             current: backendData.credits_remaining,
@@ -137,12 +134,11 @@ export const authOptions: NextAuthOptions = {
         }
       }
       
-      // Add debugging
-      console.log('JWT callback - token:', {
+      // Log the token for debugging
+      console.log('JWT callback - token values:', {
         id: token.id,
         sub: token.sub,
         backendId: token.backendId,
-        name: token.name,
         credits: token.credits
       });
       
@@ -154,6 +150,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = String(token.sub || token.id || "");
         
         // Fix for the backendId type compatibility
+        console.log('Setting session.user.backendId from token:', token.backendId);
         session.user.backendId = String(token.backendId || "");
         
         // Ensure image is set and handle potential null/undefined
@@ -164,8 +161,8 @@ export const authOptions: NextAuthOptions = {
           session.user.credits = token.credits;
         }
         
-        // Add debugging
-        console.log('Session callback - session.user:', {
+        // Log session for debugging
+        console.log('Session callback - session.user values:', {
           id: session.user.id,
           backendId: session.user.backendId,
           credits: session.user.credits
@@ -174,7 +171,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug mode to see NextAuth logs
   pages: {
     signIn: '/',
   },
