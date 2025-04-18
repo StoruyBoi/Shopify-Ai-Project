@@ -26,7 +26,6 @@ interface AuthContextType {
   logout: () => void;
   refreshCredits: () => Promise<void>;
   isRefreshingCredits: boolean;
-  // Added the missing updateCredits function to the interface
   updateCredits: (current: number, max: number) => void;
 }
 
@@ -81,28 +80,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut({ callbackUrl: '/' });
   }, []);
 
-  // Add the missing updateCredits function
+  // Update credits function with proper event dispatching
   const updateCredits = useCallback((current: number, max: number) => {
+    console.log(`Updating credits: ${current}/${max}`);
     setCredits({ current, max });
+    
     // Dispatch a custom event to notify other components about credits update
-    window.dispatchEvent(new CustomEvent('credits-updated'));
+    try {
+      window.dispatchEvent(new CustomEvent('credits-updated'));
+    } catch (error) {
+      console.error('Failed to dispatch credits-updated event:', error);
+    }
   }, []);
 
   // Refresh credits with caching and request deduplication
   const refreshCredits = useCallback(async () => {
     // Don't fetch if not logged in
-    if (!user?.backendId) return;
+    if (!user?.backendId) {
+      console.log('Skip refreshCredits: No user backendId available');
+      return;
+    }
     
     // Return cached data if it's recent enough
     const now = Date.now();
     if (now - lastCreditsFetchTime.current < CACHE_DURATION) {
+      console.log('Using cached credits data');
       return;
     }
     
     // If there's already a pending request, return that instead of making a new one
     if (pendingRequestRef.current) {
+      console.log('Using existing credits request');
       return pendingRequestRef.current;
     }
+    
+    console.log('Fetching fresh credits data');
     
     // Start refreshing
     setIsRefreshingCredits(true);
@@ -114,22 +126,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           method: 'GET',
           headers: {
             'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Expires': '0'
           },
+          cache: 'no-store',
         });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch credits');
+          throw new Error(`Failed to fetch credits: ${response.status} ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response format: expected JSON');
         }
         
         const data = await response.json();
+        console.log('Credits data received:', data);
+        
+        if (data.credits_remaining === undefined || data.max_credits === undefined) {
+          throw new Error('Invalid credits data received from server');
+        }
         
         // Use the updateCredits function to set credits
         updateCredits(data.credits_remaining, data.max_credits);
         
         // Update cache timestamp
         lastCreditsFetchTime.current = Date.now();
-      } catch (error) {
-        console.error('Error refreshing credits:', error);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Error refreshing credits:', errorMessage);
       } finally {
         setIsRefreshingCredits(false);
         pendingRequestRef.current = null;
@@ -139,20 +165,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return pendingRequestRef.current;
   }, [user?.backendId, updateCredits]);
 
+  // Create the context value object once to avoid unnecessary rerenders
+  const contextValue = {
+    isLoggedIn: !!user,
+    user,
+    credits,
+    login,
+    logout,
+    refreshCredits,
+    isRefreshingCredits,
+    updateCredits,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        isLoggedIn: !!user,
-        user,
-        credits,
-        login,
-        logout,
-        refreshCredits,
-        isRefreshingCredits,
-        // Include the updateCredits function in the provider value
-        updateCredits,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
