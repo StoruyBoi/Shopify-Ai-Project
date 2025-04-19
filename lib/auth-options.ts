@@ -90,8 +90,8 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
             name VARCHAR(255),
             email VARCHAR(255),
             image TEXT,
-            credits_remaining INT DEFAULT 5,
-            max_credits INT DEFAULT 5,
+            credits_remaining INT DEFAULT 3,
+            max_credits INT DEFAULT 3,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
           )
@@ -121,8 +121,8 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
     }
     
     let userId;
-    let userCredits = 5; // Default credits for new users
-    let maxCredits = 5;  // Default max credits
+    let userCredits = 3; // Default credits for new users
+    let maxCredits = 3;  // Default max credits
     
     if (existingUsers.length > 0) {
       // User exists, update their data
@@ -157,7 +157,7 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
           query: `
             INSERT INTO users 
             (google_id, name, email, image, credits_remaining, max_credits) 
-            VALUES (?, ?, ?, ?, 5, 5)
+            VALUES (?, ?, ?, ?, 3, 3)
           `,
           values: [
             userData.google_id, 
@@ -270,7 +270,7 @@ export const authOptions: NextAuthOptions = {
         
         if (!token.credits) {
           console.warn('⚠️ No credits found in token, using defaults');
-          token.credits = { current: 5, max: 5 };
+          token.credits = { current: 3, max: 3 };
         }
         
         // Log the token for debugging
@@ -304,7 +304,7 @@ export const authOptions: NextAuthOptions = {
           if (token.credits) {
             session.user.credits = token.credits;
           } else {
-            session.user.credits = { current: 5, max: 5 };
+            session.user.credits = { current: 3, max: 3 };
           }
           
           // Log session for debugging

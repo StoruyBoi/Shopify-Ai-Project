@@ -48,8 +48,8 @@ async function initializeDatabase() {
         name VARCHAR(255),
         email VARCHAR(255),
         image VARCHAR(2000),
-        credits_remaining INT DEFAULT 5,
-        max_credits INT DEFAULT 5,
+        credits_remaining INT DEFAULT 3,
+        max_credits INT DEFAULT 3,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )

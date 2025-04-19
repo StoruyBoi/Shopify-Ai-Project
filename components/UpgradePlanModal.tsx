@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { X, Check, CreditCard, Zap } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface UpgradePlanModalProps {
   isOpen: boolean;
@@ -59,59 +58,23 @@ const plans = [
 
 export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState('');
-  // Removed the unused 'user' variable from useAuth()
-  const { } = useAuth();
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleUpgrade = async () => {
-    setIsProcessing(true);
-    setError('');
+  const handleUpgrade = () => {
+    // Show coming soon message instead of processing payment
+    setShowComingSoon(true);
     
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-      
-      const response = await fetch('http://localhost/Backend/upgrade-plan.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          plan_id: selectedPlan
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to upgrade plan');
-      }
-      
-      // Simulate payment processing
-      setTimeout(() => {
-        setIsProcessing(false);
-        onClose();
-        
-        // Show success message
-        alert(`Successfully upgraded to ${plans.find(p => p.id === selectedPlan)?.name} plan!`);
-      }, 2000);
-      
-    } catch (err: unknown) {
-      // Changed 'any' to 'unknown' for better type safety
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      setIsProcessing(false);
-    }
+    // Hide coming soon message after 3 seconds
+    setTimeout(() => {
+      setShowComingSoon(false);
+    }, 3000);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl p-6 relative animate-fadeIn">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-sm md:max-w-4xl p-4 md:p-6 relative animate-fadeIn">
         <button 
           onClick={onClose} 
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -119,47 +82,63 @@ export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalPr
           <X className="h-5 w-5" />
         </button>
         
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Upgrade Your Plan
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Choose the plan that works best for you and get more credits to generate Shopify code.
-          </p>
-        </div>
-        
-        {error && (
-          <div className="mb-6 p-3 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
-            {error}
+        {/* Coming Soon Alert */}
+        {showComingSoon && (
+          <div className="absolute top-0 left-0 right-0 bg-yellow-100 dark:bg-yellow-900/20 border-b border-yellow-300 dark:border-yellow-700 p-3 text-center rounded-t-lg z-20">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              Paid plans coming soon! We&apos;re still working on this feature.
+            </p>
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="text-center mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Upgrade Your Plan
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+            Choose the plan that works best for you and get more credits to generate Shopify code.
+          </p>
+        </div>
+
+        {/* Plans with hidden scrollbar and no arrows */}
+        <div 
+          className="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-visible gap-4 md:gap-6 mb-6 md:mb-8 pb-2 snap-x snap-mandatory no-scrollbar"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <style jsx global>{`
+            .no-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          
           {plans.map((plan) => (
             <div 
               key={plan.id}
-              className={`rounded-lg border ${
+              className={`rounded-lg border snap-center flex-shrink-0 w-[85%] md:w-auto ${
                 selectedPlan === plan.id 
                   ? 'border-indigo-500 ring-2 ring-indigo-500 ring-opacity-50' 
                   : 'border-gray-200 dark:border-gray-700'
-              } p-6 relative transition-all ${
+              } p-4 md:p-6 relative transition-all mt-6 md:mt-0 ${
                 plan.popular ? 'md:-mt-4 md:mb-4' : ''
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-0 right-0 flex justify-center">
-                  <span className="bg-indigo-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                <div className="absolute -top-4 left-0 right-0 flex justify-center z-10">
+                  <span className="bg-indigo-600 text-white text-sm font-medium px-4 py-1 rounded-full shadow-md">
                     Most Popular
                   </span>
                 </div>
               )}
               
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-2">
                 {plan.name}
               </h3>
               
               <div className="flex items-baseline mb-4">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                <span className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {plan.price}
                 </span>
                 <span className="text-gray-600 dark:text-gray-400 ml-1">
@@ -211,18 +190,13 @@ export default function UpgradePlanModal({ isOpen, onClose }: UpgradePlanModalPr
           <button
             type="button"
             onClick={handleUpgrade}
-            disabled={isProcessing}
-            className={`flex items-center justify-center gap-2 py-3 px-6 rounded-md font-medium ${
-              isProcessing
-                ? 'bg-indigo-400 dark:bg-indigo-700 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
-            } text-white`}
+            className="flex items-center justify-center gap-2 py-3 px-6 rounded-md font-medium bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white"
           >
             <CreditCard className="h-5 w-5" />
-            {isProcessing ? 'Processing...' : `Upgrade to ${plans.find(p => p.id === selectedPlan)?.name}`}
+            <span>Upgrade to {plans.find(p => p.id === selectedPlan)?.name}</span>
           </button>
         </div>
       </div>
     </div>
-  ); 
+  );
 }
