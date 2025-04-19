@@ -25,6 +25,27 @@ export default function Home() {
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   // New state for feedback popup
   // const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
+  
+  // New state to track first visit - fixed by adding underscore to indicate intentionally unused
+  const [, setHasShownFirstTimeModal] = useState<boolean>(true);
+
+  // Check if this is the first visit for non-logged in users
+  useEffect(() => {
+    // Only run once on initial page load
+    const hasVisitedBefore = localStorage.getItem('hasVisitedBefore');
+    
+    // If user is not logged in and hasn't visited before, show the auth modal
+    if (!isLoggedIn && !hasVisitedBefore) {
+      // Set a small delay to ensure page has properly loaded
+      setTimeout(() => {
+        setShowAuthModal(true);
+      }, 1000);
+      
+      // Set flag in localStorage to remember user has visited
+      localStorage.setItem('hasVisitedBefore', 'true');
+      setHasShownFirstTimeModal(true);
+    }
+  }, [isLoggedIn]);
 
   // Progress bar logic
   useEffect(() => {
@@ -238,12 +259,11 @@ export default function Home() {
       />
       
       {/* Feedback Popup - New Component */}
-{/* <FeedbackPopup
-  isOpen={showFeedbackPopup}
-  onClose={() => setShowFeedbackPopup(false)}
-  generatedCode={generatedCode}
-/> */}
-
+      {/* <FeedbackPopup
+        isOpen={showFeedbackPopup}
+        onClose={() => setShowFeedbackPopup(false)}
+        generatedCode={generatedCode}
+      /> */}
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-7xl flex-grow">
