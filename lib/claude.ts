@@ -1,5 +1,6 @@
 /**
  * Claude API integration for Shopify Liquid code generation
+ * Optimized for serverless environments with timeout handling and error management
  */
 
 export async function generateShopifyCode(
@@ -8,6 +9,12 @@ export async function generateShopifyCode(
   imageDescriptions: string
 ) {
   try {
+    // Add timeout handling with AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 50000); // 50-second timeout
+    
+    console.log(`Starting Claude API request for section type: ${sectionType}`);
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -25,16 +32,39 @@ export async function generateShopifyCode(
           }
         ]
       }),
+      signal: controller.signal // Connect AbortController
     });
+    
+    // Clear timeout to prevent memory leaks
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Error calling Claude API');
+      console.error(`Claude API error: ${response.status} ${response.statusText}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: 'Failed to parse error response' };
+      }
+      throw new Error(errorData.message || `Error calling Claude API: ${response.status}`);
     }
 
+    console.log('Claude API response received successfully');
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      throw new Error('Invalid response format from Claude API');
+    }
+    
     return data.content[0].text;
-  } catch (error) {
+  } catch (error: unknown) {
+    // Handle specific AbortError for timeouts
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('Claude API request timed out after 50 seconds');
+      throw new Error('Request to generate code timed out. Please try again.');
+    }
+    
     console.error('Error generating code:', error);
     throw error;
   }
