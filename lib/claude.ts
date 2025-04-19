@@ -43,7 +43,7 @@ export async function generateShopifyCode(
       let errorData;
       try {
         errorData = await response.json();
-      } catch {
+      } catch { // Removed parameter entirely to fix ESLint error
         errorData = { message: 'Failed to parse error response' };
       }
       throw new Error(errorData.message || `Error calling Claude API: ${response.status}`);
