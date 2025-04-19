@@ -18,25 +18,24 @@ const Header: React.FC = () => {
         border-b border-gray-200 dark:border-gray-800
         bg-white dark:bg-gray-900
         shadow-md dark:shadow-none
-        sticky top-0 z-50 py-2 sm:py-3 transition-colors
+        sticky top-0 z-50 py-2.5 sm:py-3 transition-colors
       "
     >
       <div className="container mx-auto px-2 sm:px-4 flex items-center justify-between">
         {/* Logo and App Name */}
-        <Link href="/" className="flex items-center gap-1 sm:gap-2">
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
           <div className="p-1 sm:p-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
             <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white transition-colors">
-            <span className="hidden xs:inline sm:hidden">Image</span>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white transition-colors truncate">
             <span className="hidden sm:inline">Shopify Image Wizard</span>
-            <span className="xs:hidden">IMG</span>
+            <span className="sm:hidden">Image Wizard</span>
           </h1>
         </Link>
 
         {/* Right side controls - Mobile responsive */}
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-          {/* Credits Display - now more compact on mobile */}
+        <div className="flex items-center gap-1.5 sm:gap-4">
+          {/* Credits Display - visible on all screen sizes */}
           {isLoggedIn && (
             <div className="flex items-center">
               <CreditsDisplay />
@@ -44,7 +43,7 @@ const Header: React.FC = () => {
           )}
 
           {/* Powered By - only on larger screens */}
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden md:block transition-colors">
+          <div className="text-sm text-gray-600 dark:text-gray-400 hidden md:block transition-colors">
             Powered by Claude 3.7
           </div>
 
