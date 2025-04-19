@@ -22,14 +22,14 @@ const Header: React.FC = () => {
       "
     >
       <div className="container mx-auto px-2 sm:px-4 flex items-center justify-between">
-        {/* Logo and App Name */}
+        {/* Logo and App Name - Mobile shows ONLY logo */}
         <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
-          <div className="p-1 sm:p-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+          <div className="p-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-white" />
           </div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white transition-colors truncate">
-            <span className="hidden sm:inline">Shopify Image Wizard</span>
-            <span className="sm:hidden">Image Wizard</span>
+          {/* Title only visible on sm screens and up */}
+          <h1 className="hidden sm:block text-xl font-bold text-gray-900 dark:text-white transition-colors">
+            Shopify Image Wizard
           </h1>
         </Link>
 

@@ -30,7 +30,7 @@ interface AuthContextType {
 }
 
 // Default credits
-const defaultCredits: Credits = { current: 5, max: 5 }; // Default to 5 credits as fallback
+const defaultCredits: Credits = { current: 3, max: 3 }; // Default to 5 credits as fallback
 
 // Create context
 const AuthContext = createContext<AuthContextType | null>(null);
