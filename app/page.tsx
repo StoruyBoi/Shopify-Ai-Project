@@ -7,7 +7,7 @@ import RequirementsInput from '@/components/RequirementsInput';
 import ImageDescriptionInput from '@/components/ImageDescriptionInput';
 import CodeDisplay from '@/components/CodeDisplay';
 import AuthModal from '@/components/AuthModal';
-import FeedbackPopup from '@/components/FeedbackPopup'; // New import
+// import FeedbackPopup from '@/components/FeedbackPopup'; // New import
 import { Sparkles, Code } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -24,7 +24,7 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   // New state for feedback popup
-  const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
+  // const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
 
   // Progress bar logic
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function Home() {
           
           // Show feedback popup after a short delay
           setTimeout(() => {
-            setShowFeedbackPopup(true);
+            // setShowFeedbackPopup(true);
           }, 2000);
         } else {
           throw new Error('No code was generated. Please try again.');
@@ -238,11 +238,11 @@ export default function Home() {
       />
       
       {/* Feedback Popup - New Component */}
-<FeedbackPopup
+{/* <FeedbackPopup
   isOpen={showFeedbackPopup}
   onClose={() => setShowFeedbackPopup(false)}
   generatedCode={generatedCode}
-/>
+/> */}
 
 
       {/* Main Content */}
