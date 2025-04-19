@@ -1,4 +1,3 @@
-// app/api/credits/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options';
@@ -9,6 +8,9 @@ interface UserCredits {
   credits_remaining: number;
   max_credits: number;
 }
+
+// Set default max credits to 3
+const DEFAULT_MAX_CREDITS = 3;
 
 export async function GET() {
   try {
@@ -59,25 +61,25 @@ export async function GET() {
       // Fallback: Use default values if user not found
       console.log('User not found, using default credits values');
       return NextResponse.json({
-        credits_remaining: 5,
-        max_credits: 5
+        credits_remaining: DEFAULT_MAX_CREDITS,
+        max_credits: DEFAULT_MAX_CREDITS
       });
     }
     
     console.log('Credits data retrieved:', results[0]);
     
-    // Return the credits data
+    // Return the credits data (enforce max_credits = 3 if needed)
     return NextResponse.json({
       credits_remaining: results[0].credits_remaining,
-      max_credits: results[0].max_credits
+      max_credits: Math.min(results[0].max_credits, DEFAULT_MAX_CREDITS)
     });
     
   } catch (error) {
     console.error('API route error:', error);
     // Return default values instead of error to prevent client errors
     return NextResponse.json({
-      credits_remaining: 5,
-      max_credits: 5
+      credits_remaining: DEFAULT_MAX_CREDITS,
+      max_credits: DEFAULT_MAX_CREDITS
     });
   }
 }

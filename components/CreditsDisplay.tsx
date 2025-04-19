@@ -48,35 +48,43 @@ const CreditsDisplay: React.FC = () => {
   return (
     <div className="relative">
       <div 
-        className="flex items-center gap-2 py-1 px-2 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-medium cursor-help transition-colors"
+        className="flex items-center gap-1 sm:gap-2 py-1 px-1.5 sm:px-2 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-medium cursor-help transition-colors"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
+        {/* Credit icon - hide on smallest screens */}
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          width="16" 
-          height="16" 
+          width="14" 
+          height="14" 
           viewBox="0 0 24 24" 
           fill="none" 
           stroke="currentColor" 
           strokeWidth="2" 
           strokeLinecap="round" 
           strokeLinejoin="round" 
-          className="text-gray-500 dark:text-gray-400"
+          className="hidden xs:block text-gray-500 dark:text-gray-400"
         >
           <rect x="2" y="6" width="20" height="12" rx="2" />
           <path d="M2 10h20" />
         </svg>
-        <span className="whitespace-nowrap text-gray-700 dark:text-gray-300 transition-colors">
-          {credits.current}/{credits.max} Credits
+        
+        {/* Credits counter - smaller on mobile */}
+        <span className="whitespace-nowrap text-gray-700 dark:text-gray-300 transition-colors text-[10px] xs:text-xs">
+          {credits.current}/{credits.max}
+          <span className="hidden xs:inline"> Credits</span>
         </span>
-        <div className="w-24 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden transition-colors">
+        
+        {/* Progress bar - narrower on mobile */}
+        <div className="w-12 xs:w-16 sm:w-24 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden transition-colors">
           <div 
             className="h-full bg-green-500 transition-all duration-500 ease-in-out"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <Info className="h-3 w-3 text-gray-400 dark:text-gray-500 transition-colors" />
+        
+        {/* Info icon - hide on mobile */}
+        <Info className="hidden sm:block h-3 w-3 text-gray-400 dark:text-gray-500 transition-colors" />
       </div>
       
       {showTooltip && (

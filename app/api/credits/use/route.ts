@@ -1,4 +1,3 @@
-// app/api/credits/use/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options';
@@ -9,6 +8,9 @@ interface UserCredits {
   credits_remaining: number;
   max_credits: number;
 }
+
+// Set default max credits to 3
+const DEFAULT_MAX_CREDITS = 3;
 
 export async function POST() {
   try {
@@ -35,8 +37,8 @@ export async function POST() {
 
     // Update user credits (decrement by 1)
     await executeQuery({
-      query: 'UPDATE users SET credits_remaining = GREATEST(credits_remaining - 1, 0) WHERE id = ?',
-      values: [userId]
+      query: 'UPDATE users SET credits_remaining = GREATEST(credits_remaining - 1, 0), max_credits = ? WHERE id = ?',
+      values: [DEFAULT_MAX_CREDITS, userId]
     });
     
     // Get updated credits
@@ -48,7 +50,7 @@ export async function POST() {
     if (results.length === 0) {
       console.error('User not found after credit update:', userId);
       return NextResponse.json(
-        { error: 'User not found', credits_remaining: 0, max_credits: 0 },
+        { error: 'User not found', credits_remaining: 0, max_credits: DEFAULT_MAX_CREDITS },
         { status: 404 }
       );
     }
@@ -64,7 +66,7 @@ export async function POST() {
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
-      { error: 'Failed to use credit', credits_remaining: 0, max_credits: 0 },
+      { error: 'Failed to use credit', credits_remaining: 0, max_credits: DEFAULT_MAX_CREDITS },
       { status: 500 }
     );
   }
