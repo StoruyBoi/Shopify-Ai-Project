@@ -30,7 +30,7 @@ interface AuthContextType {
 }
 
 // Default credits
-const defaultCredits: Credits = { current: 0, max: 0 };
+const defaultCredits: Credits = { current: 5, max: 5 }; // Default to 5 credits as fallback
 
 // Create context
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const lastCreditsFetchTime = useRef<number>(0);
   const CACHE_DURATION = 30000; // 30 seconds cache
   const pendingRequestRef = useRef<Promise<void> | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update user from session
   useEffect(() => {
@@ -68,6 +69,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
     }
   }, [session]);
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Login function
   const login = useCallback((token: string) => {
@@ -93,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Refresh credits with caching and request deduplication
+  // Refresh credits with caching, request deduplication and retry logic
   const refreshCredits = useCallback(async () => {
     // Don't fetch if not logged in
     if (!user?.backendId) {
@@ -121,46 +131,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Create a new request and store it
     pendingRequestRef.current = (async () => {
-      try {
-        // Updated to use the new API endpoint
-        const response = await fetch('https://www.codehallow.com/api/credits', {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-          cache: 'no-store',
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch credits: ${response.status} ${response.statusText}`);
+      let retryCount = 3; // Try up to 3 times
+      let delay = 500; // Start with 500ms delay
+      
+      while (retryCount > 0) {
+        try {
+          // Use relative URL instead of absolute
+          const response = await fetch('/api/credits', {
+            method: 'GET',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            },
+            cache: 'no-store',
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch credits: ${response.status} ${response.statusText}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Invalid response format: expected JSON');
+          }
+          
+          const data = await response.json();
+          console.log('Credits data received:', data);
+          
+          // Check if data contains expected fields
+          if (data.credits_remaining !== undefined && data.max_credits !== undefined) {
+            // Use the updateCredits function to set credits
+            updateCredits(data.credits_remaining, data.max_credits);
+            
+            // Update cache timestamp
+            lastCreditsFetchTime.current = Date.now();
+            
+            // Success - exit the retry loop
+            break;
+          } else {
+            console.warn('Unexpected data format:', data);
+            // Use fallback values
+            updateCredits(defaultCredits.current, defaultCredits.max);
+            lastCreditsFetchTime.current = Date.now();
+            break;
+          }
+        } catch (error) {
+          retryCount--;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          console.error(`Error refreshing credits (${retryCount} retries left):`, errorMessage);
+          
+          if (retryCount <= 0) {
+            // All retries failed, use fallback values
+            console.warn('All retries failed, using default credits values');
+            updateCredits(defaultCredits.current, defaultCredits.max);
+            lastCreditsFetchTime.current = Date.now();
+          } else {
+            // Wait before retrying with exponential backoff
+            await new Promise(resolve => {
+              retryTimeoutRef.current = setTimeout(resolve, delay);
+              delay *= 2; // Exponential backoff
+            });
+          }
         }
-        
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Invalid response format: expected JSON');
-        }
-        
-        const data = await response.json();
-        console.log('Credits data received:', data);
-        
-        if (data.credits_remaining === undefined || data.max_credits === undefined) {
-          throw new Error('Invalid credits data received from server');
-        }
-        
-        // Use the updateCredits function to set credits
-        updateCredits(data.credits_remaining, data.max_credits);
-        
-        // Update cache timestamp
-        lastCreditsFetchTime.current = Date.now();
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        console.error('Error refreshing credits:', errorMessage);
-      } finally {
-        setIsRefreshingCredits(false);
-        pendingRequestRef.current = null;
       }
+      
+      // Request complete
+      setIsRefreshingCredits(false);
+      pendingRequestRef.current = null;
     })();
     
     return pendingRequestRef.current;
