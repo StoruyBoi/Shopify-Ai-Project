@@ -1,5 +1,5 @@
 // lib/db.ts
-import mysql from 'mysql2/promise';
+import mysql, { PoolOptions } from 'mysql2/promise';
 
 // Define a type for query parameters
 type QueryParam = string | number | boolean | null | Date | Buffer;
@@ -12,8 +12,7 @@ function getPool() {
   if (!pool) {
     console.log('Creating new database connection pool');
     
-    // More robust pool configuration
-    pool = mysql.createPool({
+    const poolConfig: PoolOptions = {
       host: process.env.MYSQL_HOST,
       user: process.env.MYSQL_USER,
       password: process.env.MYSQL_PASSWORD,
@@ -22,11 +21,15 @@ function getPool() {
       connectionLimit: 5,
       queueLimit: 0,
       enableKeepAlive: true,
-      // Add timeout settings
-      connectTimeout: 60000,
-      // Don't use SSL for local development
-      ssl: process.env.NODE_ENV === 'production' ? {} : undefined
-    });
+      connectTimeout: 60000
+    };
+    
+    // Only add SSL in production
+    if (process.env.NODE_ENV === 'production') {
+      poolConfig.ssl = {};
+    }
+    
+    pool = mysql.createPool(poolConfig);
     
     // Initialize database on first connection
     initializeDatabase().catch(err => {
@@ -70,23 +73,38 @@ async function initializeDatabase() {
   }
 }
 
-// Execute query with detailed error tracking
+// Execute query with detailed error tracking - fixed Promise.race typing issues
 export async function executeQuery<T>({ query, values }: { query: string; values?: QueryParam[] }): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  
   try {
     console.log(`Executing query: ${query}`);
     const connPool = getPool();
     
-    // Add timeout for query execution
-    const [results] = await Promise.race([
-      connPool.execute(query, values),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 15000)
-      )
-    ]) as [any, any];
+    // Create a promise that handles both query execution and timeout
+    const queryPromiseWithTimeout = new Promise<T>((resolve, reject) => {
+      // Set timeout to reject if query takes too long
+      timeoutId = setTimeout(() => {
+        reject(new Error('Database query timeout'));
+      }, 15000);
+      
+      // Execute the query
+      connPool.execute(query, values)
+        .then(([rows]) => {
+          clearTimeout(timeoutId);
+          resolve(rows as unknown as T);
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+    });
     
-    return results as T;
+    return await queryPromiseWithTimeout;
   } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId);
     console.error('Database error:', error);
+    
     // Add more context to the error
     const enhancedError = new Error(
       `Database query failed: ${error instanceof Error ? error.message : String(error)}`
