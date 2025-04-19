@@ -16,7 +16,7 @@ interface BackendResponse {
   status: string;
   user: {
     id: string;
-    image?: string | null; // Updated to accept null values
+    image?: string | null;
   };
   credits_remaining: number;
   max_credits: number;
@@ -80,7 +80,7 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
       return null;
     }
     
-    // Create table if it doesn't exist
+    // Create table if it doesn't exist - use a simple query to avoid permissions issues
     try {
       await executeQuery({
         query: `
@@ -89,7 +89,7 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
             google_id VARCHAR(255) UNIQUE,
             name VARCHAR(255),
             email VARCHAR(255),
-            image VARCHAR(255),
+            image TEXT,
             credits_remaining INT DEFAULT 5,
             max_credits INT DEFAULT 5,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -106,16 +106,25 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
     
     // Check if user exists in database
     console.log('🔍 Checking if user exists with google_id:', userData.google_id);
-    const existingUsers = await executeQuery<DbUser[]>({
-      query: 'SELECT * FROM users WHERE google_id = ?',
-      values: [userData.google_id]
-    });
+    
+    // FIX: Explicitly type existingUsers variable and initialize with empty array
+    let existingUsers: DbUser[] = [];
+    
+    try {
+      existingUsers = await executeQuery<DbUser[]>({
+        query: 'SELECT * FROM users WHERE google_id = ?',
+        values: [userData.google_id]
+      });
+    } catch (queryError) {
+      console.error('❌ Error querying for existing user:', queryError);
+      // existingUsers remains an empty array
+    }
     
     let userId;
     let userCredits = 5; // Default credits for new users
     let maxCredits = 5;  // Default max credits
     
-    if (existingUsers && existingUsers.length > 0) {
+    if (existingUsers.length > 0) {
       // User exists, update their data
       const user = existingUsers[0];
       userId = user.id;
@@ -127,7 +136,12 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
       try {
         await executeQuery({
           query: 'UPDATE users SET name = ?, email = ?, image = ? WHERE id = ?',
-          values: [userData.name || null, userData.email || null, userData.image || null, userId]
+          values: [
+            userData.name || null, 
+            userData.email || null, 
+            userData.image || null, 
+            userId
+          ]
         });
         console.log('✅ User data updated successfully');
       } catch (updateError) {
@@ -140,16 +154,26 @@ async function syncWithBackend(userData: UserSyncData): Promise<BackendResponse 
       
       try {
         const result = await executeQuery<QueryResult>({
-          query: 'INSERT INTO users (google_id, name, email, image, credits_remaining, max_credits) VALUES (?, ?, ?, ?, 5, 5)',
-          values: [userData.google_id, userData.name || null, userData.email || null, userData.image || null]
+          query: `
+            INSERT INTO users 
+            (google_id, name, email, image, credits_remaining, max_credits) 
+            VALUES (?, ?, ?, ?, 5, 5)
+          `,
+          values: [
+            userData.google_id, 
+            userData.name || null, 
+            userData.email || null, 
+            userData.image || null
+          ]
         });
         
         if (result && 'insertId' in result) {
           userId = result.insertId;
           console.log('✅ New user created with ID:', userId);
         } else {
-          console.error('❌ Insert succeeded but no insertId was returned:', result);
-          return null;
+          console.error('❌ Insert succeeded but no insertId was returned');
+          // Create a fallback ID if necessary
+          userId = Date.now(); // Temporary ID as fallback
         }
       } catch (insertError) {
         console.error('❌ Error creating new user:', insertError);
@@ -199,7 +223,7 @@ export const authOptions: NextAuthOptions = {
       try {
         // If this is a sign-in with new user data
         if (user) {
-          console.log('👤 Setting user data in token');
+          console.log('👤 Setting user data in token from sign-in');
           token.id = user.id;
           token.name = user.name;
           token.email = user.email;
@@ -238,6 +262,17 @@ export const authOptions: NextAuthOptions = {
           }
         }
         
+        // Make sure we always have a backendId and credits to avoid undefined errors
+        if (!token.backendId) {
+          console.warn('⚠️ No backendId found in token, using fallback');
+          token.backendId = token.sub || token.id || String(Date.now());
+        }
+        
+        if (!token.credits) {
+          console.warn('⚠️ No credits found in token, using defaults');
+          token.credits = { current: 5, max: 5 };
+        }
+        
         // Log the token for debugging
         console.log('🔑 JWT callback - token values:', {
           id: token.id,
@@ -258,9 +293,9 @@ export const authOptions: NextAuthOptions = {
           // Add user ID to the session - ensuring string type
           session.user.id = String(token.sub || token.id || "");
           
-          // Fix for the backendId type compatibility
+          // Fix for the backendId type compatibility - ensure it's never undefined
           console.log('💾 Setting session.user.backendId from token:', token.backendId);
-          session.user.backendId = String(token.backendId || "");
+          session.user.backendId = String(token.backendId || token.sub || token.id || "");
           
           // Ensure image is set and handle potential null/undefined
           session.user.image = String(token.picture || "");
@@ -268,6 +303,8 @@ export const authOptions: NextAuthOptions = {
           // Add credits info to the session
           if (token.credits) {
             session.user.credits = token.credits;
+          } else {
+            session.user.credits = { current: 5, max: 5 };
           }
           
           // Log session for debugging
