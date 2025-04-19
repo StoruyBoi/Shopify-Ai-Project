@@ -28,20 +28,21 @@ const Header: React.FC = () => {
             <Sparkles className="h-4 w-4 text-white" />
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">
-            Shopify Image Wizard
+            <span className="hidden sm:inline">Shopify Image Wizard</span>
+            <span className="sm:hidden">Image Wizard</span>
           </h1>
         </Link>
 
         {/* Right side controls - Mobile responsive */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Credits Display - only show when logged in */}
+          {/* Credits Display - now visible on all screen sizes */}
           {isLoggedIn && (
-            <div className="hidden sm:block">
+            <div className="flex items-center">
               <CreditsDisplay />
             </div>
           )}
 
-          {/* Powered By */}
+          {/* Powered By - only on larger screens */}
           <div className="text-sm text-gray-600 dark:text-gray-400 hidden md:block transition-colors">
             Powered by Claude 3.7
           </div>
