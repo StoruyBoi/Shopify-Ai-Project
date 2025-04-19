@@ -238,11 +238,12 @@ export default function Home() {
       />
       
       {/* Feedback Popup - New Component */}
-      <FeedbackPopup
-        isOpen={showFeedbackPopup}
-        onClose={() => setShowFeedbackPopup(false)}
-        generatedCode={generatedCode}
-      />
+<FeedbackPopup
+  isOpen={showFeedbackPopup}
+  onClose={() => setShowFeedbackPopup(false)}
+  generatedCode={generatedCode}
+/>
+
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-7xl flex-grow">

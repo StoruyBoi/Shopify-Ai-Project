@@ -1,15 +1,20 @@
 // app/api/feedback/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { Resend } from 'resend';
 
-// Define feedback data structure
+// Initialize Resend with your API key
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Enhanced feedback data structure with more user details
 interface Feedback {
   rating: number;
   comment: string;
-  generatedCode: string;
+  generatedCode?: string;
   timestamp: string;
-  email: string;
+  email?: string;
+  userName?: string;
+  userEmail?: string;
+  sectionType?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -25,40 +30,88 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Prepare feedback data for storage
+    // Add current timestamp if not provided
     const feedbackEntry = {
       ...data,
-      timestamp: new Date().toISOString(),
+      timestamp: data.timestamp || new Date().toISOString(),
     };
     
-    // Get the comments file path
-    const commentsDir = path.join(process.cwd(), 'data');
-    const commentsFile = path.join(commentsDir, 'comments.json');
+    // Format the star rating as emoji stars
+    const starRating = '⭐'.repeat(data.rating);
     
-    // Ensure the directory exists
-    if (!fs.existsSync(commentsDir)) {
-      fs.mkdirSync(commentsDir, { recursive: true });
+    // Send email with feedback
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: 'Shopify Code Generator <feedback@codehallow.com>',
+      to: 'customersupport@xebrand.in',
+      subject: `${starRating} New Feedback: ${data.rating}/5 Stars - Shopify Code Generator`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #4f46e5; margin-top: 0;">New User Feedback Received</h2>
+          
+          <div style="margin-bottom: 20px; background-color: #f9fafb; padding: 15px; border-radius: 6px;">
+            <p style="margin-top: 0; font-size: 18px; font-weight: bold;">Rating: ${starRating} (${data.rating}/5)</p>
+            <p style="margin-bottom: 0;"><strong>Submitted:</strong> ${new Date(feedbackEntry.timestamp).toLocaleString()}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #4b5563;">User Information</h3>
+            <p><strong>Name:</strong> ${feedbackEntry.userName || 'Anonymous'}</p>
+            <p><strong>Email:</strong> ${feedbackEntry.userEmail || 'Not provided'}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: #4b5563;">Feedback Details</h3>
+            <p><strong>Section Type:</strong> ${feedbackEntry.sectionType || 'Not specified'}</p>
+            <p><strong>Comment:</strong></p>
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; white-space: pre-wrap;">${feedbackEntry.comment || 'No comment provided'}</div>
+          </div>
+          
+          <div>
+            <h3 style="margin-top: 0; color: #4b5563;">Generated Code Preview</h3>
+            <div style="background-color: #f1f5f9; padding: 15px; border-radius: 6px; font-family: monospace; overflow: auto; max-height: 300px; white-space: pre-wrap;">${
+              feedbackEntry.generatedCode?.substring(0, 500) || 'No code provided'
+            }${feedbackEntry.generatedCode && feedbackEntry.generatedCode.length > 500 ? '...' : ''}</div>
+          </div>
+          
+          <p style="margin-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
+            This feedback was submitted through the Shopify Code Generator feedback system.
+          </p>
+        </div>
+      `
+    });
+    
+    // Handle potential email error
+    if (emailError) {
+      console.error('Error sending feedback email:', emailError);
+      return NextResponse.json(
+        { error: 'Failed to send email notification' },
+        { status: 500 }
+      );
     }
     
-    // Read existing comments or create empty array
-    let comments = [];
-    if (fs.existsSync(commentsFile)) {
-      const fileContent = fs.readFileSync(commentsFile, 'utf-8');
-      comments = JSON.parse(fileContent);
-    }
+    // Log email sent success with the correct property
+    console.log('Feedback email sent:', emailData?.id);
     
-    // Add new comment and write back to file
-    comments.push(feedbackEntry);
-    fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2), 'utf-8');
+    // Log the feedback in server logs (this works in serverless)
+    console.log('📝 New Feedback Received:');
+    console.log(JSON.stringify({
+      rating: feedbackEntry.rating,
+      comment: feedbackEntry.comment,
+      userName: feedbackEntry.userName || 'Anonymous',
+      userEmail: feedbackEntry.userEmail || 'Not provided',
+      sectionType: feedbackEntry.sectionType || 'Not specified',
+      timestamp: feedbackEntry.timestamp,
+    }, null, 2));
     
-    // You could also implement email sending functionality here
-    // to notify customersupport@xebrand.in about new feedback
+    return NextResponse.json({ 
+      success: true,
+      message: "Feedback received and email notification sent"
+    });
     
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
-      { error: 'Failed to save feedback' },
+      { error: 'Failed to process feedback' },
       { status: 500 }
     );
   }

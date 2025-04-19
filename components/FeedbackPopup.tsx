@@ -1,21 +1,41 @@
 // components/FeedbackPopup.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Star, Send, Check } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 
 interface FeedbackPopupProps {
   isOpen: boolean;
   onClose: () => void;
   generatedCode: string;
+  sectionType?: string;
 }
 
-export default function FeedbackPopup({ isOpen, onClose, generatedCode }: FeedbackPopupProps) {
+export default function FeedbackPopup({ 
+  isOpen, 
+  onClose, 
+  generatedCode,
+  sectionType = 'Not specified' 
+}: FeedbackPopupProps) {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { data: session } = useSession();
+  
+  // Reset the form when opened
+  useEffect(() => {
+    if (isOpen) {
+      setRating(0);
+      setComment('');
+      setError(null);
+      setIsSubmitted(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -28,6 +48,10 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
     setError(null);
 
     try {
+      // Get user info from auth context or session
+      const userName = user?.name || session?.user?.name || 'Anonymous User';
+      const userEmail = user?.email || session?.user?.email || 'No email provided';
+
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: {
@@ -36,14 +60,18 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
         body: JSON.stringify({
           rating,
           comment,
-          generatedCode,
+          generatedCode: generatedCode.substring(0, 1500), // Limit code length
           timestamp: new Date().toISOString(),
-          email: 'customersupport@xebrand.in', // Target email for the feedback
+          email: 'customersupport@xebrand.in', // Target email
+          userName,
+          userEmail,
+          sectionType
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit feedback');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to submit feedback');
       }
 
       setIsSubmitted(true);
@@ -54,7 +82,8 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
         setComment('');
       }, 2000);
     } catch (err) {
-      setError('Failed to submit feedback. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit feedback';
+      setError(errorMessage);
       console.error('Error submitting feedback:', err);
     } finally {
       setIsSubmitting(false);
@@ -62,11 +91,16 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md p-6 relative animate-fadeIn">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      aria-modal="true"
+      role="dialog"
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md p-4 sm:p-6 relative animate-fadeIn">
         <button 
           onClick={onClose} 
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+          aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
@@ -95,10 +129,11 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
                   key={star}
                   type="button"
                   onClick={() => handleRatingChange(star)}
-                  className="p-2 transition-colors"
+                  className="p-1.5 sm:p-2 transition-colors"
+                  aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
                 >
                   <Star 
-                    className={`h-8 w-8 ${
+                    className={`h-7 w-7 sm:h-8 sm:w-8 ${
                       star <= rating 
                         ? 'text-yellow-400 fill-yellow-400' 
                         : 'text-gray-300 dark:text-gray-600'
@@ -115,14 +150,14 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                rows={4}
+                rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white resize-none"
                 placeholder="Tell us what you liked or how we can improve..."
               ></textarea>
             </div>
             
             {error && (
-              <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -131,7 +166,7 @@ export default function FeedbackPopup({ isOpen, onClose, generatedCode }: Feedba
               type="button"
               onClick={handleSubmit}
               disabled={rating === 0 || isSubmitting}
-              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md font-medium ${
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium ${
                 rating === 0 || isSubmitting
                   ? 'bg-indigo-400 dark:bg-indigo-700 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
