@@ -1,7 +1,7 @@
 // components/CreditsDisplay.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,17 +9,17 @@ const CreditsDisplay: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const { credits, refreshCredits, isRefreshingCredits } = useAuth();
   const progress = credits.max > 0 ? Math.max(0, Math.min(100, (credits.current / credits.max) * 100)) : 0;
-  const lastRefreshTime = useRef<number>(0);
+  const lastRefreshTimeRef = useRef<number>(0);
   const REFRESH_INTERVAL = 60000; // Only refresh once per minute
 
-  // Throttled refresh function
-  const throttledRefresh = () => {
+  // Memoize the throttled refresh function with useCallback
+  const throttledRefresh = useCallback(() => {
     const now = Date.now();
-    if (now - lastRefreshTime.current > REFRESH_INTERVAL && !isRefreshingCredits) {
-      lastRefreshTime.current = now;
+    if (now - lastRefreshTimeRef.current > REFRESH_INTERVAL && !isRefreshingCredits) {
+      lastRefreshTimeRef.current = now;
       refreshCredits();
     }
-  };
+  }, [REFRESH_INTERVAL, isRefreshingCredits, refreshCredits]);
 
   // Refresh credits when component mounts, but with throttling
   useEffect(() => {
@@ -31,7 +31,7 @@ const CreditsDisplay: React.FC = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [isRefreshingCredits, refreshCredits]);
+  }, [throttledRefresh, REFRESH_INTERVAL]);
 
   // Listen for credit update events with debouncing
   useEffect(() => {
@@ -43,7 +43,7 @@ const CreditsDisplay: React.FC = () => {
     return () => {
       window.removeEventListener('credits-updated', handleCreditsUpdated);
     };
-  }, []);
+  }, [throttledRefresh]);
 
   return (
     <div className="relative">
@@ -92,5 +92,5 @@ const CreditsDisplay: React.FC = () => {
     </div>
   );
 };
-
+ 
 export default CreditsDisplay;
