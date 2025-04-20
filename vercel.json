@@ -1,8 +1,16 @@
 {
-    "functions": {
-      "app/api/generate-code/route.ts": {
-        "maxDuration": 60
-      }
+  "functions": {
+    "app/api/generate-code/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/reset-credits/route.ts": {
+      "maxDuration": 10
     }
-  }
-  
+  },
+  "crons": [
+    {
+      "path": "/api/reset-credits",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
