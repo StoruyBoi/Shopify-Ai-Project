@@ -171,29 +171,6 @@ ${imageDescriptions || 'No reference images provided.'}
 SECTION REQUIREMENTS:
 ${requirements}
 
-### ASSET HANDLING
-- ALWAYS check if assets exist before rendering
-- Use proper srcset and sizes attributes for responsive images
-- Implement lazy loading for all images
-- Set explicit width/height to prevent layout shift
-- SVG icons can be used directly in the template code
-
-
-### SLIDER SETTINGS (WHEN USING SLIDERS)
-- enable_slider: Checkbox (true)
-- autoplay: Checkbox (false)
-- autoplay_speed: Range 
-- show_arrows: Checkbox (true)
-- show_dots: Checkbox (true)
-- infinite_loop: Checkbox (true)
-- slides_to_show: Range 
-- slides_to_scroll: Range 
-- slide_padding: Range 
-- transition_speed: Range 
-
-### IMAGE and VIDEO SETTINGS (WHEN USING IMAGES)
-- Use Shopfiy prebuilt Image placeholder everytime same for vidoe use prebuilt defalt video placeholder
-
 Please create a complete, production-ready Shopify section that implements all these requirements. Include HTML, CSS, and JSON schema. Follow these specifications:
 
 1. Use unique class names with the pattern "section-${sectionType.toLowerCase().replace(/\s+/g, '-')}-[element]" to avoid CSS conflicts
@@ -202,8 +179,6 @@ Please create a complete, production-ready Shopify section that implements all t
 4. Make the section fully responsive for mobile, tablet and desktop
 5. Add appropriate comments explaining the code
 6. Follow modern Shopify best practices
-7. Fully Dynamic , Customizable 
-8. Think where you can use section schema and wher you can use Block Schema 
 
 For images, use this structure:
 <img src="{{ section.settings.image | img_url: 'master'}}" alt="{{ section.settings.image_alt | escape }}" loading="lazy">
@@ -218,10 +193,6 @@ Structure your response exactly like this:
 <html>
 <!-- HTML code for the section -->
 </html>
-<!-- List any required CDN links that should be added to theme.liquid -->
-<script>
-// JavaScript code for the section if any
-</script>
 
 <style>
 /* CSS code for the section */
