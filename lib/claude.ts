@@ -79,39 +79,7 @@ ${imageDescriptions || 'No reference images provided.'}
 SECTION REQUIREMENTS:
 ${requirements}
 
-### SLIDER LIBRARIES
-- INCLUDE proper initialization with section.id
-- ADD all required CSS and JS via CDN
-- USE defensive loading with library check
-- IMPLEMENT responsive breakpoints
-- PROVIDE schema controls for all slider options if using
-
-
-## CRITICAL DEVELOPMENT RULES
--Invalid schema: setting with id="slides_per_view_mobile" step invalid. Range settings must have at least 3 steps
-- ALL range inputs MUST have default values divisible by step value
-- ALL color fields MUST have proper hex defaults (#FFFFFF format)
-- NO circular references in schema
-- Range inputs MUST have (max-min) evenly divisible by step
-
-
-### 2. CLASS NAMING SYSTEM
-- MANDATORY: Use BEM methodology
-  * Block: section-${sectionType.toLowerCase().replace(/\s+/g, '-')}
-  * Element: section-${sectionType.toLowerCase().replace(/\s+/g, '-')}__element
-  * Modifier: section-${sectionType.toLowerCase().replace(/\s+/g, '-')}__element--modifier
-- NEVER use generic class names (container, wrapper, button, etc.)
-- ADD data-section-id="{{ section.id }}" to root element
-- NAMESPACE JS variables with section ID to prevent global conflicts
-
-
-### 3. RESPONSIVE DESIGN
-- Mobile-first CSS approach required
-- Include specific breakpoints: 749px, 989px, 1199px
-- Use responsive settings in schema for mobile adjustments
-- Add mobile-specific classes as needed
-
-### 4. ASSET HANDLING
+### ASSET HANDLING
 - ALWAYS check if assets exist before rendering
 - Use proper srcset and sizes attributes for responsive images
 - Implement lazy loading for all images
@@ -131,31 +99,8 @@ ${requirements}
 - slide_padding: Range 
 - transition_speed: Range 
 
-
-### UNIVERSAL SETTINGS (REQUIRED IN ALL SECTIONS)
-- Section heading group:
-* heading: Text input with default
-* heading_size: Select (small, medium, large)
-* heading_color: Color picker (#000000)
-- Layout controls:
-* padding_top: Range (0-100px, step: 5, default: 30)
-* padding_bottom: Range (0-100px, step: 5, default: 30)
-* background_color: Color picker (#FFFFFF)
-* text_color: Color picker (#333333)
-* content_alignment: Select (left, center, right)
-- Mobile controls:
-* custom_class: Text input
-* enable_mobile_stack: Checkbox (true)
-* 
-
-
-### IMAGE SETTINGS (WHEN USING IMAGES)
+### IMAGE and VIDEO SETTINGS (WHEN USING IMAGES)
 - Use Shopfiy prebuilt Image placeholder everytime same for vidoe use prebuilt defalt video placeholder
-- image: Image picker
-- image_width: Range (50-100, step: 5, default: 100)
-- image_height: Range (auto, custom)
-- image_fit: Select (cover, contain, fill)
-- mobile_image: Image picker 
 
 Please create a complete, production-ready Shopify section that implements all these requirements. Include HTML, CSS, and JSON schema. Follow these specifications:
 
