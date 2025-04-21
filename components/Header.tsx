@@ -25,7 +25,7 @@ const Header: React.FC = () => {
       className="
         border-b border-gray-200 dark:border-gray-800
         bg-white dark:bg-gray-900
-        shadow-md dark:shadow-none
+         dark:shadow-none
         sticky top-0 z-50 py-2.5 sm:py-3 transition-colors
       "
     >
