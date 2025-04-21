@@ -102,6 +102,10 @@ Structure your response exactly like this:
 <!-- HTML code for the section -->
 </html>
 
+<script>
+// JavaScript code for the section if any
+</script>
+
 <style>
 /* CSS code for the section */
 </style>
