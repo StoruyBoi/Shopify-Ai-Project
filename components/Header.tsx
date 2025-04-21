@@ -4,6 +4,7 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import Link from 'next/link';
+// Removed the unused router import
 import CreditsDisplay from './CreditsDisplay';
 import { ThemeToggle } from './ThemeToggle';
 import UserSettingsMenu from './UserSettingsMenu';
@@ -11,6 +12,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Header: React.FC = () => {
   const { isLoggedIn } = useAuth();
+  // Removed the unused router variable
+
+  // Function to handle logo click - forces a full page reload
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default Link behavior
+    window.location.href = '/'; // Force a full page reload to home
+  };
 
   return (
     <header
@@ -22,8 +30,12 @@ const Header: React.FC = () => {
       "
     >
       <div className="container mx-auto px-2 sm:px-4 flex items-center justify-between">
-        {/* Logo and App Name - Mobile shows ONLY logo */}
-        <Link href="/" className="flex items-center gap-1.5 sm:gap-2">
+        {/* Logo and App Name with reload behavior */}
+        <Link 
+          href="/" 
+          className="flex items-center gap-1.5 sm:gap-2"
+          onClick={handleLogoClick}
+        >
           <div className="p-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
