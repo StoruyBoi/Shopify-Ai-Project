@@ -179,6 +179,14 @@ Please create a complete, production-ready Shopify section that implements all t
 4. Make the section fully responsive for mobile, tablet and desktop
 5. Add appropriate comments explaining the code
 6. Follow modern Shopify best practices
+7. Use the latest Liquid syntax and features
+8. Ensure the code is clean, well-structured, and easy to read
+9. Include error handling and fallback mechanisms where necessary
+10. Use best practices for performance optimization
+11. Ensure accessibility standards are met
+12. Use semantic HTML elements where appropriate
+13. For images and video use always default shopfy placeholder
+14. Fully Dynamic , Customizable and Responsive
 
 For images, use this structure:
 <img src="{{ section.settings.image | img_url: 'master'}}" alt="{{ section.settings.image_alt | escape }}" loading="lazy">
